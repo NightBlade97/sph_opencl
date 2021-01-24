@@ -31,7 +31,7 @@ using float_duration = std::chrono::duration<float>;
 using vec2 = Vector<float,2>;
 
 // Original code: https://github.com/cerrno/mueller-sph
-constexpr const float kernel_radius = 16;
+constexpr const float kernel_radius = 13;
 constexpr const float particle_mass = 65;
 constexpr const float poly6 = 315.f/(65.f*float(M_PI)*std::pow(kernel_radius,9));
 constexpr const float spiky_grad = -45.f/(float(M_PI)*std::pow(kernel_radius,6));
@@ -87,11 +87,14 @@ kernel void compute_density_and_pressure(float poly6, float gas_const, float res
 kernel void compute_forces(float visc_laplacian, float spiky_grad, float visc_const, float kernel_radius, float particle_mass,
   global float2 * positions, global float2 * velocities, global float2 * forces, global float * pressures, global float * densities  ) {
 
-    float2 G = {0.f, 12000*-9.8f};
     int i = get_global_id(0);
     int nx = get_global_size(0);
+
+    float2 G = {0.f, 12000*-9.8f};
+
     float2 pressure_force = {0.f, 0.f};
     float2 viscosity_force  = {0.f, 0.f};
+
     for (int j=0; j<nx; ++j){
         if (j == i) { continue; }
         float2 delta = positions[j] - positions[i];
@@ -187,8 +190,6 @@ OpenCL init_opencl(){
 }
 
 
-
-
 void generate_particles() {
     std::random_device dev;
     std::default_random_engine prng(dev());
@@ -207,7 +208,7 @@ void generate_particles() {
             particles.emplace_back(vec2{x+dist_x(prng),y+dist_y(prng)});
         }
     }
-    std::clog << "No. of particles: " << particles.size() << std::endl;
+    std::clog << "Number of particles = " << particles.size() << std::endl;
 
 }
 
@@ -359,7 +360,7 @@ void on_idle_gpu() {
 
     }
 
-    int num_particles = particles.size();
+    int number_particles = particles.size();
 
     std::vector<float> densities, pressures;
     std::vector<opencl_vector> positions, velocities, forces;
@@ -405,25 +406,13 @@ void on_idle_gpu() {
     kernel_positions.setArg(8, d_densities);
 
     opencl.queue.flush();
-    try{
-        opencl.queue.enqueueNDRangeKernel(kernel_density_and_pressure,cl::NullRange, cl::NDRange(num_particles),cl::NullRange);
-    }
-    catch (cl::Error err){
-        printf("Error code is %i\n", err);
-    };
-    try{
-        opencl.queue.enqueueNDRangeKernel(kernel_forces,cl::NullRange, cl::NDRange(num_particles),cl::NullRange);
-    }
-    catch (cl::Error err){
-        printf("Error code is %i\n", err);
-    };
-    try{
-        opencl.queue.enqueueNDRangeKernel(kernel_positions,cl::NullRange, cl::NDRange(num_particles),cl::NullRange);
-    }
-    catch (cl::Error err){
-        printf("Error code is %i\n", err);
-    };
 
+    opencl.queue.enqueueNDRangeKernel(kernel_density_and_pressure,cl::NullRange, cl::NDRange(number_particles),cl::NullRange);
+    
+    opencl.queue.enqueueNDRangeKernel(kernel_forces,cl::NullRange, cl::NDRange(number_particles),cl::NullRange);
+     
+    opencl.queue.enqueueNDRangeKernel(kernel_positions,cl::NullRange, cl::NDRange(number_particles),cl::NullRange);
+    
     opencl.queue.finish();
 
     cl::copy(opencl.queue, d_pressures, begin(pressures), end(pressures));
@@ -436,15 +425,18 @@ void on_idle_gpu() {
 
     opencl.queue.flush();
 
-    for (int i=0; i<num_particles;++i) {
+    for (int i=0; i < number_particles;++i) {
+        
+        particles[i].density = densities[i];
+        particles[i].pressure = pressures[i];
+        
         particles[i].position[0] = positions[i].x;
         particles[i].position[1] = positions[i].y;
         particles[i].velocity[0] = velocities[i].x;
         particles[i].velocity[1] = velocities[i].y;
         particles[i].force[0] = forces[i].x;
         particles[i].force[1] = forces[i].y;
-        particles[i].density = densities[i];
-        particles[i].pressure = pressures[i];
+
     }
 
     auto t1 = clock_type::now();

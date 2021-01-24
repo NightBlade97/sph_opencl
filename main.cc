@@ -112,7 +112,6 @@ kernel void compute_forces(float visc_laplacian, float spiky_grad, float visc_co
 kernel void compute_positions(int window_width, int window_height, float rest_density, float kernel_radius, float particle_mass,
  global float2 * positions, global float2 * velocities, global float2 * forces, global float * densities  ) {
         
-    float rest_density = 1000.f;
     const float time_step = 0.0008f;
     const float eps = kernel_radius;
     const float damping = -0.5f;

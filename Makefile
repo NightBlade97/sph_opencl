@@ -6,6 +6,10 @@ run: build/sph
 	Xvfb :123 -screen 0 800x600x24 &
 	env DISPLAY=:123 ./build/sph
 
+run-gpu: build/sph
+	Xvfb :123 -screen 0 800x600x24 &
+	env DISPLAY=:123 ./build/sph gpu
+
 vglrun: build/sph
 	env LD_LIBRARY_PATH=$(LIBRARY_PATH) vglrun ./build/sph
 

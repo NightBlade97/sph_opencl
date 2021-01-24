@@ -67,7 +67,7 @@ struct OpenCL {
 const std::string src = R"(
 
 kernel void compute_density_and_pressure(float poly6, float gas_const, float rest_density, float kernel_radius, float particle_mass,
- global float2 * positions, global float * pressures, global float * densities,) {
+ global float2 * positions, global float * pressures, global float * densities) {
 
     float kernel_radius_squared = kernel_radius * kernel_radius;
     float sum = 0;
@@ -84,7 +84,7 @@ kernel void compute_density_and_pressure(float poly6, float gas_const, float res
     
 }
 
-kernel void compute_forces(float visc_laplacian, float spiky_grad, float visc_const, float kernel_radius, float particle_mass
+kernel void compute_forces(float visc_laplacian, float spiky_grad, float visc_const, float kernel_radius, float particle_mass,
   global float2 * positions, global float2 * velocities, global float2 * forces, global float * pressures, global float * densities  ) {
 
     float2 G = {0.f, 12000*-9.8f};
